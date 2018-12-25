@@ -1,1 +1,1 @@
-module "github.com/koron-go/materialize"
+module github.com/koron-go/materialize
