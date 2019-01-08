@@ -22,7 +22,7 @@ func MustAdd(fn interface{}) {
 	DefaultMaterializer.MustAdd(fn)
 }
 
-// Close closes all cached values.
-func Close() {
-	DefaultMaterializer.Close()
+// CloseAll closes all cached values.
+func CloseAll() {
+	DefaultMaterializer.CloseAll()
 }

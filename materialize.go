@@ -3,6 +3,7 @@ package materialize
 import (
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"sync"
 )
@@ -12,6 +13,7 @@ type Materializer struct {
 	mu    sync.Mutex
 	cache *cache
 	repo  Repository
+	log   *log.Logger
 }
 
 // New creates a Materializer.
@@ -25,6 +27,21 @@ func New() *Materializer {
 func (m *Materializer) WithRepository(r Repository) *Materializer {
 	m.repo = r
 	return m
+}
+
+// WithRepository replaces a *log.Logger.
+func (m *Materializer) WithLogger(l *log.Logger) *Materializer {
+	m.log = l
+	m.cache.log = l
+	return m
+}
+
+func (m *Materializer) logf(format string, args ...interface{}) {
+	if m.log == nil {
+		log.Printf(format, args...)
+		return
+	}
+	m.log.Printf(format, args...)
 }
 
 // Materialize gets or creates an instance of receiver's type.
@@ -115,9 +132,9 @@ func (m *Materializer) Add(fn interface{}) error {
 	return nil
 }
 
-// Close closes all values which implements Close() method, and clear value
+// CloseAll closes all values which implements Close() method, and clear value
 // cache.
-func (m *Materializer) Close() {
+func (m *Materializer) CloseAll() {
 	m.mu.Lock()
 	m.cache.closeAll()
 	m.mu.Unlock()
