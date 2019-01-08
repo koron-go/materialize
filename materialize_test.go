@@ -6,9 +6,7 @@ import (
 )
 
 func newTestMaterializer(t *testing.T) *Materializer {
-	m := New()
-	m.Repository = Repository{}
-	return m
+	return New().WithRepository(Repository{})
 }
 
 type Foo struct {

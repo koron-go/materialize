@@ -3,6 +3,7 @@ package materialize
 import (
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"sync"
 )
@@ -10,16 +11,37 @@ import (
 // Materializer manages materialize instances.
 type Materializer struct {
 	mu    sync.Mutex
-	cache Cache
-
-	Repository Repository
+	cache *cache
+	repo  Repository
+	log   *log.Logger
 }
 
 // New creates a Materializer.
 func New() *Materializer {
 	return &Materializer{
-		cache: Cache{},
+		cache: newCache(),
 	}
+}
+
+// WithRepository replaces a Repository.
+func (m *Materializer) WithRepository(r Repository) *Materializer {
+	m.repo = r
+	return m
+}
+
+// WithRepository replaces a *log.Logger.
+func (m *Materializer) WithLogger(l *log.Logger) *Materializer {
+	m.log = l
+	m.cache.log = l
+	return m
+}
+
+func (m *Materializer) logf(format string, args ...interface{}) {
+	if m.log == nil {
+		log.Printf(format, args...)
+		return
+	}
+	m.log.Printf(format, args...)
 }
 
 // Materialize gets or creates an instance of receiver's type.
@@ -34,12 +56,12 @@ func (m *Materializer) Materialize(receiver interface{}) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if v, ok := m.cache[typ]; ok {
+	if v, ok := m.cache.getObj(typ); ok {
 		rv.Elem().Set(v)
 		return nil
 	}
 
-	f, ok := m.repos()[typ]
+	f, ok := m.getRepo()[typ]
 	if !ok {
 		return fmt.Errorf("not found factories for: %s", typ)
 	}
@@ -47,21 +69,21 @@ func (m *Materializer) Materialize(receiver interface{}) error {
 	if err != nil {
 		return fmt.Errorf("factory failed: %v", err)
 	}
-	m.cache[typ] = v
+	m.cache.putObj(typ, v)
 	rv.Elem().Set(v)
 
 	return nil
 }
 
-func (m *Materializer) repos() Repository {
-	if m.Repository != nil {
-		return m.Repository
+func (m *Materializer) getRepo() Repository {
+	if m.repo != nil {
+		return m.repo
 	}
-	return DefaultRepository
+	return defaultRepository
 }
 
 func (m *Materializer) addFactory(typ reflect.Type, f Factory) {
-	m.repos()[typ] = f
+	m.getRepo()[typ] = f
 }
 
 // MustAdd adds a function as Factory.
@@ -93,7 +115,7 @@ func (m *Materializer) Add(fn interface{}) error {
 	defer m.mu.Unlock()
 
 	typ := ft.Out(0)
-	if _, ok := m.repos()[typ]; ok {
+	if _, ok := m.getRepo()[typ]; ok {
 		return fmt.Errorf("duplicated factory for %s", typ)
 	}
 
@@ -108,6 +130,14 @@ func (m *Materializer) Add(fn interface{}) error {
 	}
 
 	return nil
+}
+
+// CloseAll closes all values which implements Close() method, and clear value
+// cache.
+func (m *Materializer) CloseAll() {
+	m.mu.Lock()
+	m.cache.closeAll()
+	m.mu.Unlock()
 }
 
 func newFactory1(typ reflect.Type, fn reflect.Value) Factory {

@@ -1,7 +1,7 @@
 package materialize
 
-// DefaultRepository is default Repository for Materializer.
-var DefaultRepository = Repository{}
+// defaultRepository is default Repository for Materializer.
+var defaultRepository = Repository{}
 
 // DefaultMaterializer provides default Materializer.
 var DefaultMaterializer = New()
@@ -20,4 +20,9 @@ func Add(fn interface{}) error {
 // MustAdd adds a function as Factory.
 func MustAdd(fn interface{}) {
 	DefaultMaterializer.MustAdd(fn)
+}
+
+// CloseAll closes all cached values.
+func CloseAll() {
+	DefaultMaterializer.CloseAll()
 }
