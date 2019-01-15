@@ -13,9 +13,21 @@ type Foo struct {
 	id int
 }
 
+func newFoo() *Foo {
+	return &Foo{}
+}
+
+func (*Foo) Foo() {}
+
 type Bar struct {
 	id int
 }
+
+func newBar() *Bar {
+	return &Bar{}
+}
+
+func (*Bar) Bar() {}
 
 type testFactory struct {
 	foo []*Foo
