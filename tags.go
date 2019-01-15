@@ -1,5 +1,6 @@
 package materialize
 
+// Tags provides tags information.
 type Tags map[string]struct{}
 
 func newTags(tags []string) Tags {
