@@ -46,36 +46,45 @@ func (m *Materializer) logf(format string, args ...interface{}) {
 
 // Materialize gets or creates an instance of receiver's type.
 func (m *Materializer) Materialize(receiver interface{}, queryTags ...string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	x := &Context{m: m}
+	return m.materialize(x, receiver, queryTags...)
+}
+
+func (m *Materializer) materialize(x *Context, receiver interface{}, queryTags ...string) error {
 	rv := reflect.ValueOf(receiver)
 	if rv.Kind() != reflect.Ptr {
 		return errors.New("receiver should be a pointer")
 	}
 	typ := rv.Type().Elem()
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	switch typ.Kind() {
 	case reflect.Ptr:
-		return m.materializeType(rv, typ)
+		return m.materializeType(x, rv, typ)
 	case reflect.Interface:
-		return m.materializeInterface(rv, typ, queryTags)
+		return m.materializeInterface(x, rv, typ, queryTags)
 	default:
 		return fmt.Errorf("unsupported type: %s (%s)", typ, typ.Kind())
 	}
 }
 
-func (m *Materializer) materializeType(rv reflect.Value, typ reflect.Type) error {
+func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect.Type) error {
+	if v, ok := x.getObj(typ); ok {
+		rv.Elem().Set(v)
+		return nil
+	}
+
 	if v, ok := m.cache.getObj(typ); ok {
 		rv.Elem().Set(v)
 		return nil
 	}
 
-	e, ok := m.getRepo()[typ]
+	f, ok := m.getRepo()[typ]
 	if !ok {
 		return fmt.Errorf("not found factories for: %s", typ)
 	}
-	v, err := e.Factory()
+	v, err := f.newInstance(x)
 	if err != nil {
 		return fmt.Errorf("factory failed: %v", err)
 	}

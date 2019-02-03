@@ -99,7 +99,7 @@ func TestCloser0(t *testing.T) {
 	if err == nil {
 		t.Error("materialize r0b should be failed")
 	}
-	if err.Error() != "factory failed: factory for *materialize.Res0 returned nil" {
+	if err.Error() != "factory failed: factory for *materialize.Res0 returned nil at 1st value" {
 		t.Errorf("unexpected error for r0b: %s", err)
 	}
 }
