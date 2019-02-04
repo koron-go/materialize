@@ -102,11 +102,12 @@ func (m *Materializer) getRepo() Repository {
 }
 
 // MustAdd adds a function as Factory.
-func (m *Materializer) MustAdd(fn interface{}, tags ...string) {
+func (m *Materializer) MustAdd(fn interface{}, tags ...string) *Materializer {
 	err := m.Add(fn, tags...)
 	if err != nil {
 		panic(err)
 	}
+	return m
 }
 
 // Add adds a function as Factory.

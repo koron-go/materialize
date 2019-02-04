@@ -103,16 +103,16 @@ func (ps *outProcs) checkLen(expect int) {
 		if n == expect {
 			return nil
 		}
-		return fmt.Errorf("factory for %s should return %d values but %d", x.typ, expect, n)
+		panic(fmt.Sprintf("factory for %s should return %d values but %d", x.typ, expect, n))
 	})
 }
 
 func (ps *outProcs) checkZero() {
 	ps.add(func(x *Context, out []reflect.Value) error {
-		if out[0].IsNil() {
-			return fmt.Errorf("factory for %s returned nil at 1st value", x.typ)
+		if !out[0].IsNil() {
+			return nil
 		}
-		return nil
+		return fmt.Errorf("factory for %s returned nil at 1st value", x.typ)
 	})
 }
 
@@ -129,7 +129,17 @@ func (ps *outProcs) checkErr(nerr int) {
 
 func (ps *outProcs) checkCtx() {
 	ps.add(func(x *Context, out []reflect.Value) error {
-		return x.err
+		if x.err != nil {
+			return x.err
+		}
+		if x.val == nil {
+			return nil
+		}
+		v := out[0].Interface()
+		if v == x.val {
+			return nil
+		}
+		panic(fmt.Sprintf("resolved value doesn't matched: resolved=%v returned=%v", x.val, v))
 	})
 }
 
@@ -143,6 +153,12 @@ func wrapFunc(typ reflect.Type, fn reflect.Value, inP inProc, outP outProcs) Fac
 			if err != nil {
 				return zv, err
 			}
+		}
+		// check context
+		if x.err != nil {
+			return zv, x.err
+		}
+		if x.val != nil {
 		}
 		return out[0], nil
 	}

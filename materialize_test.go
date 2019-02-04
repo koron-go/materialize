@@ -6,6 +6,7 @@ import (
 )
 
 func newTestMaterializer(t *testing.T) *Materializer {
+	t.Helper()
 	return New().WithRepository(Repository{})
 }
 
