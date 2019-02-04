@@ -5,31 +5,31 @@ import (
 	"reflect"
 )
 
-func (m *Materializer) materializeInterface(rv reflect.Value, typ reflect.Type, queryTags []string) error {
+func (m *Materializer) materializeInterface(x *Context, rv reflect.Value, typ reflect.Type, queryTags []string) error {
 	realTyp, ok := m.findInterface(typ, queryTags)
 	if !ok {
 		return fmt.Errorf("not found assignable for: %s", typ)
 	}
-	return m.materializeType(rv, realTyp)
+	return m.materializeType(x, rv, realTyp)
 }
 
 type matchedEntry struct {
 	typ   reflect.Type
-	entry *Entry
+	entry *Factory
 	score int
 }
 
 func (m *Materializer) findInterface(typ reflect.Type, queryTags []string) (reflect.Type, bool) {
 	var me *matchedEntry
-	for t, e := range m.repo {
+	for t, f := range m.repo {
 		if !t.AssignableTo(typ) {
 			continue
 		}
-		sc := e.Tags.score(queryTags)
+		sc := f.Tags.score(queryTags)
 		if sc >= 0 && (me == nil || me.score < sc) {
 			me = &matchedEntry{
 				typ:   t,
-				entry: e,
+				entry: f,
 				score: sc,
 			}
 			// FIXME: log matchedEntry
