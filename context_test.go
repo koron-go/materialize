@@ -122,7 +122,7 @@ func TestContext_Circular(t *testing.T) {
 		zA *Circular1A
 		zB *Circular1B
 	)
-	m.MustAdd(func (x *Context) *Circular1A {
+	m.MustAdd(func(x *Context) *Circular1A {
 		zA = &Circular1A{}
 		x.Resolve(zA).Materialize(&zA.b)
 		return zA

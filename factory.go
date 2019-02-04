@@ -9,7 +9,7 @@ import (
 // FactoryFunc creates an instance.
 type FactoryFunc func(*Context) (reflect.Value, error)
 
-// Entry represents information of a type.
+// Factory holds information for factory of a type.
 type Factory struct {
 	Type reflect.Type
 	Func FactoryFunc
