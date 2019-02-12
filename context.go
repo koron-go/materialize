@@ -43,9 +43,6 @@ func (x *Context) Resolve(v interface{}) *Context {
 
 // Materialize materializes an instance with tags.
 func (x *Context) Materialize(receiver interface{}, queryTags ...string) *Context {
-	if x.val == nil {
-		panic(fmt.Sprintf("should call Resolve() first: %s", x.typ))
-	}
 	if x.err != nil {
 		return x
 	}
@@ -53,15 +50,15 @@ func (x *Context) Materialize(receiver interface{}, queryTags ...string) *Contex
 	return x
 }
 
-func (x *Context) getObj(typ reflect.Type) (reflect.Value, bool) {
+func (x *Context) getObj(typ reflect.Type) (reflect.Value, bool, error) {
 	for x != nil {
 		if x.typ == typ {
 			if x.val == nil {
-				panic(fmt.Sprintf("not resolved *materialize.Context for %s", x.typ))
+				return reflect.Value{}, false, fmt.Errorf("not resolved *materialize.Context for %s", x.typ)
 			}
-			return reflect.ValueOf(x.val), true
+			return reflect.ValueOf(x.val), true, nil
 		}
 		x = x.p
 	}
-	return reflect.Value{}, false
+	return reflect.Value{}, false, nil
 }

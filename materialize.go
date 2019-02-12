@@ -70,8 +70,11 @@ func (m *Materializer) materialize(x *Context, receiver interface{}, queryTags .
 }
 
 func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect.Type) error {
-	if v, ok := x.getObj(typ); ok {
-		rv.Elem().Set(v)
+	v0, ok, err := x.getObj(typ)
+	if err != nil {
+		return err
+	} else if ok {
+		rv.Elem().Set(v0)
 		return nil
 	}
 
