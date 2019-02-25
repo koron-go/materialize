@@ -80,3 +80,44 @@ func TestMaterializeInterfaceTags(t *testing.T) {
 		t.Fatalf("not *FooBar: %T", f2)
 	}
 }
+
+type strCont string
+
+func (g strCont) Get() string {
+	return string(g)
+}
+
+func newGetterFactory(s string) func() Getter {
+	return func() Getter {
+		return strCont(s)
+	}
+}
+
+type Getter interface {
+	Get() string
+}
+
+/*
+func TestAddInterface(t *testing.T) {
+	m := newTestMaterializer(t)
+	m.MustAdd(newGetterFactory("foo"))
+	m.MustAdd(newGetterFactory("bar"), "abc")
+	m.MustAdd(newGetterFactory("baz"), "xyz")
+
+	check := func(exp string, tags ...string) {
+		var g Getter
+		err := m.Materialize(&g)
+		if err != nil {
+			t.Fatalf("failed to materialize Getter(%+v): %s", tags, err)
+		}
+		s := g.Get()
+		if s != exp {
+			t.Fatalf("unexpected Getter: %q (exp=%q)", s, exp)
+		}
+	}
+
+	check("foo")
+	check("bar", "abc")
+	check("baz", "xyz")
+}
+*/

@@ -1,7 +1,7 @@
 package materialize
 
 // defaultRepository is default Repository for Materializer.
-var defaultRepository = Repository{}
+var defaultRepository = &Repository{}
 
 // DefaultMaterializer provides default Materializer.
 var DefaultMaterializer = New()

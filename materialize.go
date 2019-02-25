@@ -12,7 +12,7 @@ import (
 type Materializer struct {
 	mu    sync.Mutex
 	cache *cache
-	repo  Repository
+	repo  *Repository
 	log   *log.Logger
 }
 
@@ -24,7 +24,7 @@ func New() *Materializer {
 }
 
 // WithRepository replaces a Repository.
-func (m *Materializer) WithRepository(r Repository) *Materializer {
+func (m *Materializer) WithRepository(r *Repository) *Materializer {
 	m.repo = r
 	return m
 }
@@ -83,7 +83,7 @@ func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect
 		return nil
 	}
 
-	f, ok := m.getRepo()[typ]
+	f, ok := m.getRepo().Get(typ)
 	if !ok {
 		return fmt.Errorf("not found factories for: %s", typ)
 	}
@@ -97,7 +97,15 @@ func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect
 	return nil
 }
 
-func (m *Materializer) getRepo() Repository {
+func (m *Materializer) materializeInterface(x *Context, rv reflect.Value, typ reflect.Type, queryTags []string) error {
+	f, ok := m.getRepo().findInterface(typ, queryTags)
+	if !ok {
+		return fmt.Errorf("not found assignable for: %s", typ)
+	}
+	return m.materializeType(x, rv, f.Type)
+}
+
+func (m *Materializer) getRepo() *Repository {
 	if m.repo != nil {
 		return m.repo
 	}
@@ -115,10 +123,17 @@ func (m *Materializer) MustAdd(fn interface{}, tags ...string) *Materializer {
 
 // Add adds a function as Factory.
 func (m *Materializer) Add(fn interface{}, tags ...string) error {
+	f, err := newFactory(fn)
+	if err != nil {
+		return err
+	}
 	m.mu.Lock()
-	err := m.getRepo().Add(fn, tags...)
-	m.mu.Unlock()
-	return err
+	defer m.mu.Unlock()
+	err = m.getRepo().Add(f, tags...)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // CloseAll closes all values which implements Close() method, and clear value

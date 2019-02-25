@@ -7,7 +7,7 @@ import (
 
 func newTestMaterializer(t *testing.T) *Materializer {
 	t.Helper()
-	return New().WithRepository(Repository{})
+	return New().WithRepository(&Repository{})
 }
 
 type Foo struct {
