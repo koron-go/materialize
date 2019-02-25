@@ -52,7 +52,7 @@ func TestMaterializeInterface(t *testing.T) {
 	if err == nil {
 		t.Fatalf("materialize should be failed for Bazer")
 	}
-	if err.Error() != "not found assignable for: materialize.Bazer" {
+	if err.Error() != "not found factory for type:materialize.Bazer tags:[]" {
 		t.Fatalf("unexpected error: %s", err)
 	}
 }
@@ -97,7 +97,6 @@ type Getter interface {
 	Get() string
 }
 
-/*
 func TestAddInterface(t *testing.T) {
 	m := newTestMaterializer(t)
 	m.MustAdd(newGetterFactory("foo"))
@@ -105,8 +104,9 @@ func TestAddInterface(t *testing.T) {
 	m.MustAdd(newGetterFactory("baz"), "xyz")
 
 	check := func(exp string, tags ...string) {
+		t.Helper()
 		var g Getter
-		err := m.Materialize(&g)
+		err := m.Materialize(&g, tags...)
 		if err != nil {
 			t.Fatalf("failed to materialize Getter(%+v): %s", tags, err)
 		}
@@ -120,4 +120,3 @@ func TestAddInterface(t *testing.T) {
 	check("bar", "abc")
 	check("baz", "xyz")
 }
-*/

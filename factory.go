@@ -25,7 +25,7 @@ var (
 	ctxType = reflect.TypeOf((*Context)(nil))
 )
 
-func newFactory(fn interface{}) (*Factory, error) {
+func newFactory(fn interface{}, tags []string) (*Factory, error) {
 	rfn := reflect.ValueOf(fn)
 	ft := rfn.Type()
 	if ft.Kind() != reflect.Func {
@@ -74,6 +74,7 @@ func newFactory(fn interface{}) (*Factory, error) {
 	return &Factory{
 		Type: typ,
 		Func: wrapFunc(typ, rfn, inP, outP),
+		Tags: newTags(tags),
 	}, nil
 }
 
@@ -162,4 +163,34 @@ func wrapFunc(typ reflect.Type, fn reflect.Value, inP inProc, outP outProcs) Fac
 		}
 		return out[0], nil
 	}
+}
+
+type factorySet map[string]*Factory
+
+func (fs factorySet) add(f *Factory) error {
+	k := f.Tags.joinKeys()
+	if _, ok := fs[k]; ok {
+		return fmt.Errorf("duplicated factory for type:%s tags:%+v", f.Type, f.Tags)
+	}
+	fs[k] = f
+	return nil
+}
+
+func (fs factorySet) find(mf *matchedFactory, tags Tags) *matchedFactory {
+	for _, f := range fs {
+		sc := f.Tags.score(tags)
+		if sc >= 0 && (mf == nil || mf.sc < sc) {
+			mf = &matchedFactory{
+				fac: f,
+				sc: sc,
+			}
+			// FIXME: log matchedFactory
+		}
+	}
+	return mf
+}
+
+type matchedFactory struct {
+	fac *Factory
+	sc  int
 }

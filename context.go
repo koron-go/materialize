@@ -46,7 +46,7 @@ func (x *Context) Materialize(receiver interface{}, queryTags ...string) *Contex
 	if x.err != nil {
 		return x
 	}
-	x.err = x.m.materialize(x, receiver, queryTags...)
+	x.err = x.m.materialize(x, receiver, queryTags)
 	return x
 }
 

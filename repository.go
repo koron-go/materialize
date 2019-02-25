@@ -1,56 +1,54 @@
 package materialize
 
 import (
-	"fmt"
 	"reflect"
 )
 
 // Repository stores factories for each types.
 type Repository struct {
-	facs map[reflect.Type]*Factory
+	fss map[reflect.Type]factorySet
 }
 
 // Add adds a factory for a type with tags.
-func (r *Repository) Add(f *Factory, tags ...string) error {
-	if _, ok := r.facs[f.Type]; ok {
-		return fmt.Errorf("duplicated factory for %s", f.Type)
+func (r *Repository) Add(f *Factory) error {
+	if r.fss == nil {
+		r.fss = map[reflect.Type]factorySet{}
 	}
-	f.Tags = newTags(tags)
-	if r.facs == nil {
-		r.facs = map[reflect.Type]*Factory{}
+	fs, ok := r.fss[f.Type]
+	if !ok {
+		fs = factorySet{}
+		r.fss[f.Type] = fs
 	}
-	r.facs[f.Type] = f
+	err := fs.add(f)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-// Get gets a factory for type.
-func (r *Repository) Get(typ reflect.Type) (*Factory, bool) {
-	f, ok := r.facs[typ]
-	return f, ok
-}
-
-type matchedFactory struct {
-	fac *Factory
-	sc  int
-}
-
-func (r *Repository) findInterface(typ reflect.Type, tags []string) (*Factory, bool) {
-	var mf *matchedFactory
-	for t, f := range r.facs {
-		if !t.AssignableTo(typ) {
-			continue
-		}
-		sc := f.Tags.score(tags)
-		if sc >= 0 && (mf == nil || mf.sc < sc) {
-			mf = &matchedFactory{
-				fac: f,
-				sc:  sc,
+// Query queries a factory for type.
+func (r *Repository) Query(typ reflect.Type, queryTags []string) (*Factory, bool) {
+	tags := newTags(queryTags)
+	mf := r.findDirect(typ, tags)
+	if typ.Kind() == reflect.Interface {
+		for t, fs := range r.fss {
+			if t != typ && !t.AssignableTo(typ) {
+				continue
 			}
-			// FIXME: log matchedFactory
+			mf = fs.find(mf, tags)
 		}
 	}
 	if mf == nil {
 		return nil, false
 	}
 	return mf.fac, true
+}
+
+// findDirect find a factory set for the type.
+func (r *Repository) findDirect(typ reflect.Type, tags Tags) *matchedFactory {
+	fs, ok := r.fss[typ]
+	if !ok {
+		return nil
+	}
+	return fs.find(nil, tags)
 }
