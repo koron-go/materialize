@@ -37,24 +37,24 @@ func (w *closerWrapper) Close() {
 
 // cache caches materialized instances.
 type cache struct {
-	objs map[reflect.Type]reflect.Value
+	objs map[*Factory]reflect.Value
 	c0s  []closer0
 	log  *log.Logger
 }
 
 func newCache() *cache {
 	return &cache{
-		objs: map[reflect.Type]reflect.Value{},
+		objs: map[*Factory]reflect.Value{},
 	}
 }
 
-func (c *cache) getObj(typ reflect.Type) (reflect.Value, bool) {
-	v, ok := c.objs[typ]
+func (c *cache) getObj(f *Factory) (reflect.Value, bool) {
+	v, ok := c.objs[f]
 	return v, ok
 }
 
-func (c *cache) putObj(typ reflect.Type, v reflect.Value) {
-	c.objs[typ] = v
+func (c *cache) putObj(f *Factory, v reflect.Value) {
+	c.objs[f] = v
 
 	// store v as closer0 if it implements Close() method.
 	if c0 := c.toC0(v); c0 != nil {
@@ -67,7 +67,7 @@ func (c *cache) closeAll() {
 	for i := len(c.c0s) - 1; i >= 0; i-- {
 		c.c0s[i].Close()
 	}
-	c.objs = map[reflect.Type]reflect.Value{}
+	c.objs = map[*Factory]reflect.Value{}
 	c.c0s = nil
 }
 

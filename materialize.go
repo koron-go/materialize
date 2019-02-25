@@ -69,8 +69,9 @@ func (m *Materializer) materialize(x *Context, receiver interface{}, queryTags .
 	}
 }
 
-func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect.Type) error {
-	v0, ok, err := x.getObj(typ)
+// materialize0 materialize an object for the factory.
+func (m *Materializer) materialize0(x *Context, rv reflect.Value, f *Factory) error {
+	v0, ok, err := x.getObj(f)
 	if err != nil {
 		return err
 	} else if ok {
@@ -78,23 +79,27 @@ func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect
 		return nil
 	}
 
-	if v, ok := m.cache.getObj(typ); ok {
+	if v, ok := m.cache.getObj(f); ok {
 		rv.Elem().Set(v)
 		return nil
 	}
 
-	f, ok := m.getRepo().Get(typ)
-	if !ok {
-		return fmt.Errorf("not found factories for: %s", typ)
-	}
 	v, err := f.newInstance(x)
 	if err != nil {
 		return fmt.Errorf("factory failed: %v", err)
 	}
-	m.cache.putObj(typ, v)
+	m.cache.putObj(f, v)
 	rv.Elem().Set(v)
 
 	return nil
+}
+
+func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect.Type) error {
+	f, ok := m.getRepo().Get(typ)
+	if !ok {
+		return fmt.Errorf("not found factories for: %s", typ)
+	}
+	return m.materialize0(x, rv, f)
 }
 
 func (m *Materializer) materializeInterface(x *Context, rv reflect.Value, typ reflect.Type, queryTags []string) error {

@@ -16,8 +16,8 @@ type Factory struct {
 	Tags Tags
 }
 
-func (f Factory) newInstance(x *Context) (reflect.Value, error) {
-	return f.Func(x.child(f.Type))
+func (f *Factory) newInstance(x *Context) (reflect.Value, error) {
+	return f.Func(x.child(f))
 }
 
 var (
@@ -103,7 +103,7 @@ func (ps *outProcs) checkLen(expect int) {
 		if n == expect {
 			return nil
 		}
-		panic(fmt.Sprintf("factory for %s should return %d values but %d", x.typ, expect, n))
+		panic(fmt.Sprintf("factory for %s should return %d values but %d", x.typ(), expect, n))
 	})
 }
 
@@ -112,7 +112,7 @@ func (ps *outProcs) checkZero() {
 		if !out[0].IsNil() {
 			return nil
 		}
-		return fmt.Errorf("factory for %s returned nil at 1st value", x.typ)
+		return fmt.Errorf("factory for %s returned nil at 1st value", x.typ())
 	})
 }
 
@@ -123,7 +123,7 @@ func (ps *outProcs) checkErr(nerr int) {
 			return nil
 		}
 		err := rerr.Interface().(error)
-		return fmt.Errorf("factory for %s failed: %s", x.typ, err)
+		return fmt.Errorf("factory for %s failed: %s", x.f.Type, err)
 	})
 }
 
