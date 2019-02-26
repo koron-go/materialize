@@ -8,8 +8,8 @@ var DefaultMaterializer = New()
 
 // Materialize gets or creates an instance of receiver's type
 // with DefaultMaterializer.
-func Materialize(receiver interface{}) error {
-	return DefaultMaterializer.Materialize(receiver)
+func Materialize(receiver interface{}, queryTags ...string) error {
+	return DefaultMaterializer.Materialize(receiver, queryTags...)
 }
 
 // Add adds a function as Factory with DefaultMaterializer.
