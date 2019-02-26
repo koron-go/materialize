@@ -7,19 +7,19 @@ import (
 
 // Context is a materialize context, which passed to factory as first argument.
 type Context struct {
-	m   *Materializer
-	p   *Context
-	typ reflect.Type
+	m *Materializer
+	p *Context
+	f *Factory
 
 	val interface{}
 	err error
 }
 
-func (x *Context) child(typ reflect.Type) *Context {
+func (x *Context) child(f *Factory) *Context {
 	return &Context{
-		m:   x.m,
-		p:   x,
-		typ: typ,
+		m: x.m,
+		p: x,
+		f: f,
 	}
 }
 
@@ -31,11 +31,11 @@ func (x *Context) Error() error {
 // Resolve resolves an instance temporary. This cuts circular references.
 func (x *Context) Resolve(v interface{}) *Context {
 	if x.val != nil {
-		panic(fmt.Sprintf("have resolved already %s", x.typ))
+		panic(fmt.Sprintf("have resolved already %s", x.f.Type))
 	}
 	typ := reflect.TypeOf(v)
-	if typ != x.typ {
-		panic(fmt.Sprintf("unmatched type, required type is %s", x.typ))
+	if typ != x.f.Type {
+		panic(fmt.Sprintf("unmatched type, required type is %s", x.f.Type))
 	}
 	x.val = v
 	return x
@@ -46,19 +46,23 @@ func (x *Context) Materialize(receiver interface{}, queryTags ...string) *Contex
 	if x.err != nil {
 		return x
 	}
-	x.err = x.m.materialize(x, receiver, queryTags...)
+	x.err = x.m.materialize(x, receiver, queryTags)
 	return x
 }
 
-func (x *Context) getObj(typ reflect.Type) (reflect.Value, bool, error) {
+func (x *Context) getObj(f *Factory) (reflect.Value, bool, error) {
 	for x != nil {
-		if x.typ == typ {
+		if x.f == f {
 			if x.val == nil {
-				return reflect.Value{}, false, fmt.Errorf("not resolved *materialize.Context for %s", x.typ)
+				return reflect.Value{}, false, fmt.Errorf("not resolved *materialize.Context for %s", x.f.Type)
 			}
 			return reflect.ValueOf(x.val), true, nil
 		}
 		x = x.p
 	}
 	return reflect.Value{}, false, nil
+}
+
+func (x *Context) typ() reflect.Type {
+	return x.f.Type
 }

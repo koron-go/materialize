@@ -16,8 +16,8 @@ type Factory struct {
 	Tags Tags
 }
 
-func (f Factory) newInstance(x *Context) (reflect.Value, error) {
-	return f.Func(x.child(f.Type))
+func (f *Factory) newInstance(x *Context) (reflect.Value, error) {
+	return f.Func(x.child(f))
 }
 
 var (
@@ -25,7 +25,7 @@ var (
 	ctxType = reflect.TypeOf((*Context)(nil))
 )
 
-func newFactory(fn interface{}) (*Factory, error) {
+func newFactory(fn interface{}, tags []string) (*Factory, error) {
 	rfn := reflect.ValueOf(fn)
 	ft := rfn.Type()
 	if ft.Kind() != reflect.Func {
@@ -74,6 +74,7 @@ func newFactory(fn interface{}) (*Factory, error) {
 	return &Factory{
 		Type: typ,
 		Func: wrapFunc(typ, rfn, inP, outP),
+		Tags: newTags(tags),
 	}, nil
 }
 
@@ -103,16 +104,17 @@ func (ps *outProcs) checkLen(expect int) {
 		if n == expect {
 			return nil
 		}
-		panic(fmt.Sprintf("factory for %s should return %d values but %d", x.typ, expect, n))
+		panic(fmt.Sprintf("factory for %s should return %d values but %d", x.typ(), expect, n))
 	})
 }
 
 func (ps *outProcs) checkZero() {
 	ps.add(func(x *Context, out []reflect.Value) error {
-		if !out[0].IsNil() {
-			return nil
+		o0 := out[0]
+		if o0.Kind() == reflect.Ptr && o0.IsNil() {
+			return fmt.Errorf("factory for %s returned nil at 1st value", x.typ())
 		}
-		return fmt.Errorf("factory for %s returned nil at 1st value", x.typ)
+		return nil
 	})
 }
 
@@ -123,7 +125,7 @@ func (ps *outProcs) checkErr(nerr int) {
 			return nil
 		}
 		err := rerr.Interface().(error)
-		return fmt.Errorf("factory for %s failed: %s", x.typ, err)
+		return fmt.Errorf("factory for %s failed: %s", x.f.Type, err)
 	})
 }
 
@@ -162,4 +164,34 @@ func wrapFunc(typ reflect.Type, fn reflect.Value, inP inProc, outP outProcs) Fac
 		}
 		return out[0], nil
 	}
+}
+
+type factorySet map[string]*Factory
+
+func (fs factorySet) add(f *Factory) error {
+	k := f.Tags.joinKeys()
+	if _, ok := fs[k]; ok {
+		return fmt.Errorf("duplicated factory for type:%s tags:%+v", f.Type, f.Tags)
+	}
+	fs[k] = f
+	return nil
+}
+
+func (fs factorySet) find(mf *matchedFactory, tags Tags) *matchedFactory {
+	for _, f := range fs {
+		sc := f.Tags.score(tags)
+		if sc >= 0 && (mf == nil || mf.sc < sc) {
+			mf = &matchedFactory{
+				fac: f,
+				sc: sc,
+			}
+			// FIXME: log matchedFactory
+		}
+	}
+	return mf
+}
+
+type matchedFactory struct {
+	fac *Factory
+	sc  int
 }

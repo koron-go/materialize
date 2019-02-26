@@ -1,5 +1,10 @@
 package materialize
 
+import (
+	"sort"
+	"strings"
+)
+
 // Tags provides tags information.
 type Tags map[string]struct{}
 
@@ -11,9 +16,9 @@ func newTags(tags []string) Tags {
 	return m
 }
 
-func (tags Tags) score(queryTags []string) int {
+func (tags Tags) score(other Tags) int {
 	pos := 1
-	for _, t := range queryTags {
+	for t := range other {
 		if _, ok := tags[t]; ok {
 			pos++
 		}
@@ -23,9 +28,8 @@ func (tags Tags) score(queryTags []string) int {
 	}
 
 	neg := 0
-	m := newTags(queryTags)
 	for t := range tags {
-		if _, ok := m[t]; !ok {
+		if _, ok := other[t]; !ok {
 			neg++
 		}
 	}
@@ -34,4 +38,18 @@ func (tags Tags) score(queryTags []string) int {
 	}
 
 	return pos*100 - neg
+}
+
+var tagEscape = strings.NewReplacer(" ", `\ `, `\`, `\\`)
+
+func (tags Tags) joinKeys() string {
+	if len(tags) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(tags))
+	for k := range tags {
+		keys = append(keys, tagEscape.Replace(k))
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, " ")
 }

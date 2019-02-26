@@ -12,7 +12,7 @@ import (
 type Materializer struct {
 	mu    sync.Mutex
 	cache *cache
-	repo  Repository
+	repo  *Repository
 	log   *log.Logger
 }
 
@@ -24,7 +24,7 @@ func New() *Materializer {
 }
 
 // WithRepository replaces a Repository.
-func (m *Materializer) WithRepository(r Repository) *Materializer {
+func (m *Materializer) WithRepository(r *Repository) *Materializer {
 	m.repo = r
 	return m
 }
@@ -49,10 +49,10 @@ func (m *Materializer) Materialize(receiver interface{}, queryTags ...string) er
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	x := &Context{m: m}
-	return m.materialize(x, receiver, queryTags...)
+	return m.materialize(x, receiver, queryTags)
 }
 
-func (m *Materializer) materialize(x *Context, receiver interface{}, queryTags ...string) error {
+func (m *Materializer) materialize(x *Context, receiver interface{}, queryTags []string) error {
 	rv := reflect.ValueOf(receiver)
 	if rv.Kind() != reflect.Ptr {
 		return errors.New("receiver should be a pointer")
@@ -60,17 +60,24 @@ func (m *Materializer) materialize(x *Context, receiver interface{}, queryTags .
 	typ := rv.Type().Elem()
 
 	switch typ.Kind() {
-	case reflect.Ptr:
-		return m.materializeType(x, rv, typ)
-	case reflect.Interface:
-		return m.materializeInterface(x, rv, typ, queryTags)
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
+		reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64,
+		reflect.Interface, reflect.Ptr, reflect.String:
+		return m.materialize0(x, rv, typ, queryTags)
 	default:
-		return fmt.Errorf("unsupported type: %s (%s)", typ, typ.Kind())
+		return fmt.Errorf("unsupported type:%s kind:%s", typ, typ.Kind())
 	}
 }
 
-func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect.Type) error {
-	v0, ok, err := x.getObj(typ)
+// materialize0 materializes an object for the factory.
+func (m *Materializer) materialize0(x *Context, rv reflect.Value, typ reflect.Type, queryTags []string) error {
+	f, ok := m.getRepo().Query(typ, queryTags)
+	if !ok {
+		return fmt.Errorf("not found factory for type:%s tags:%+v", typ, queryTags)
+	}
+
+	v0, ok, err := x.getObj(f)
 	if err != nil {
 		return err
 	} else if ok {
@@ -78,26 +85,22 @@ func (m *Materializer) materializeType(x *Context, rv reflect.Value, typ reflect
 		return nil
 	}
 
-	if v, ok := m.cache.getObj(typ); ok {
+	if v, ok := m.cache.getObj(f); ok {
 		rv.Elem().Set(v)
 		return nil
 	}
 
-	f, ok := m.getRepo()[typ]
-	if !ok {
-		return fmt.Errorf("not found factories for: %s", typ)
-	}
 	v, err := f.newInstance(x)
 	if err != nil {
 		return fmt.Errorf("factory failed: %v", err)
 	}
-	m.cache.putObj(typ, v)
+	m.cache.putObj(f, v)
 	rv.Elem().Set(v)
 
 	return nil
 }
 
-func (m *Materializer) getRepo() Repository {
+func (m *Materializer) getRepo() *Repository {
 	if m.repo != nil {
 		return m.repo
 	}
@@ -115,10 +118,17 @@ func (m *Materializer) MustAdd(fn interface{}, tags ...string) *Materializer {
 
 // Add adds a function as Factory.
 func (m *Materializer) Add(fn interface{}, tags ...string) error {
+	f, err := newFactory(fn, tags)
+	if err != nil {
+		return err
+	}
 	m.mu.Lock()
-	err := m.getRepo().Add(fn, tags...)
-	m.mu.Unlock()
-	return err
+	defer m.mu.Unlock()
+	err = m.getRepo().Add(f)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // CloseAll closes all values which implements Close() method, and clear value
