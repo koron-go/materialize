@@ -110,10 +110,11 @@ func (ps *outProcs) checkLen(expect int) {
 
 func (ps *outProcs) checkZero() {
 	ps.add(func(x *Context, out []reflect.Value) error {
-		if !out[0].IsNil() {
-			return nil
+		o0 := out[0]
+		if o0.Kind() == reflect.Ptr && o0.IsNil() {
+			return fmt.Errorf("factory for %s returned nil at 1st value", x.typ())
 		}
-		return fmt.Errorf("factory for %s returned nil at 1st value", x.typ())
+		return nil
 	})
 }
 

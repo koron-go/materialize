@@ -60,7 +60,10 @@ func (m *Materializer) materialize(x *Context, receiver interface{}, queryTags [
 	typ := rv.Type().Elem()
 
 	switch typ.Kind() {
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
+		reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64,
+		reflect.Interface, reflect.Ptr, reflect.String:
 		return m.materialize0(x, rv, typ, queryTags)
 	default:
 		return fmt.Errorf("unsupported type:%s kind:%s", typ, typ.Kind())

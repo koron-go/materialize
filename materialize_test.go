@@ -161,3 +161,30 @@ func TestMaterializeError(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
+
+func newStringFactory(s string) func() string {
+	return func() string { return s }
+}
+
+func TestSimple_string(t *testing.T) {
+	m := newTestMaterializer(t)
+	m.MustAdd(newStringFactory("foo"))
+	m.MustAdd(newStringFactory("bar"), "abc")
+	m.MustAdd(newStringFactory("baz"), "xyz")
+
+	check := func(exp string, tags ...string) {
+		t.Helper()
+		var s string
+		err := m.Materialize(&s, tags...)
+		if err != nil {
+			t.Fatalf("failed to materialize string(%+v): %s", tags, err)
+		}
+		if s != exp {
+			t.Fatalf("unexpected string: %q (exp=%q)", s, exp)
+		}
+	}
+
+	check("foo")
+	check("bar", "abc")
+	check("baz", "xyz")
+}
