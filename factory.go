@@ -183,7 +183,7 @@ func (fs factorySet) find(mf *matchedFactory, tags Tags) *matchedFactory {
 		if sc >= 0 && (mf == nil || mf.sc < sc) {
 			mf = &matchedFactory{
 				fac: f,
-				sc: sc,
+				sc:  sc,
 			}
 			// FIXME: log matchedFactory
 		}
