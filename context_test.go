@@ -1,6 +1,8 @@
 package materialize
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestContext_WithError(t *testing.T) {
 	m := newTestMaterializer(t)
@@ -98,7 +100,7 @@ func TestContext_Materialize(t *testing.T) {
 		t.Fatalf("materialized FooX.foo unmatched: %+v %+v", fooX.foo, z1)
 	}
 	if fooX.bar != z2 {
-		t.Fatalf("materialized FooX.bar unmatched: %+v %+v", fooX.bar, z1)
+		t.Fatalf("materialized FooX.bar unmatched: %+v %+v", fooX.bar, z2)
 	}
 	if fooX.foo.id != 1234 {
 		t.Fatalf("unexpected fooX foo: %+v", fooX.foo)
@@ -161,5 +163,50 @@ func TestContext_Circular(t *testing.T) {
 	}
 	if rB.a.b != zB {
 		t.Fatal("materialized rB.b.a unmatched")
+	}
+}
+
+func TestContext_Option(t *testing.T) {
+	m := newTestMaterializer(t)
+	var (
+		z0 *FooX
+		z2 *Bar
+	)
+	m.MustAdd(func(x *Context) (*FooX, error) {
+		z0 = &FooX{}
+		x.Resolve(z0)
+		err := x.Option(&z0.foo)
+		if err == nil {
+			t.Fatal("Option(*Foo) should be failed")
+		}
+		if err.Error() != "not found factory for type:*materialize.Foo tags:[]" {
+			t.Fatalf("Option(*Foo) returns unexpected error: %s", err)
+		}
+		err = x.Option(&z0.bar)
+		if err != nil {
+			t.Fatalf("Option(*Bar) failed: %s", err)
+		}
+		return z0, nil
+	}).MustAdd(func(x *Context) (*Bar, error) {
+		z2 = &Bar{id: 9999}
+		return z2, nil
+	})
+
+	var fooX *FooX
+	err := m.Materialize(&fooX)
+	if err != nil {
+		t.Fatalf("failed to materialize: %s", err)
+	}
+	if fooX != z0 {
+		t.Fatalf("materialized FooX unmatched: %+v %+v", fooX, z0)
+	}
+	if fooX.foo != nil {
+		t.Fatalf("FooX.foo should be nil: %+v", fooX.foo)
+	}
+	if fooX.bar != z2 {
+		t.Fatalf("materialized FooX.bar unmatched: %+v %+v", fooX.bar, z2)
+	}
+	if fooX.bar.id != 9999 {
+		t.Fatalf("unexpected fooX bar: %+v", fooX.bar)
 	}
 }

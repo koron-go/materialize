@@ -50,6 +50,12 @@ func (x *Context) Materialize(receiver interface{}, queryTags ...string) *Contex
 	return x
 }
 
+// Option materializes an optional instance with tags.
+// The error happend are not stored to Context.
+func (x *Context) Option(receiver interface{}, queryTags ...string) error {
+	return x.m.materialize(x, receiver, queryTags)
+}
+
 func (x *Context) getObj(f *Factory) (reflect.Value, bool, error) {
 	for x != nil {
 		if x.f == f {
