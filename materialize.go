@@ -38,13 +38,14 @@ func (m *Materializer) WithLogger(l *log.Logger) *Materializer {
 	return m
 }
 
-func (m *Materializer) logf(format string, args ...interface{}) {
-	if m.log == nil {
-		log.Printf(format, args...)
-		return
-	}
-	m.log.Printf(format, args...)
-}
+// unused, disabled 
+//func (m *Materializer) logf(format string, args ...interface{}) {
+//	if m.log == nil {
+//		log.Printf(format, args...)
+//		return
+//	}
+//	m.log.Printf(format, args...)
+//}
 
 // Materialize gets or creates an instance of receiver's type.
 func (m *Materializer) Materialize(receiver interface{}, queryTags ...string) error {

@@ -160,8 +160,9 @@ func wrapFunc(typ reflect.Type, fn reflect.Value, inP inProc, outP outProcs) Fac
 		if x.err != nil {
 			return zv, x.err
 		}
-		if x.val != nil {
-		}
+		// XXX: verify these invalid codes.
+		//if x.val != nil {
+		//}
 		return out[0], nil
 	}
 }
