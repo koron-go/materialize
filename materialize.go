@@ -14,6 +14,8 @@ type Materializer struct {
 	cache *cache
 	repo  *Repository
 	log   *log.Logger
+
+	currRootX *Context
 }
 
 // New creates a Materializer.
@@ -46,9 +48,16 @@ func (m *Materializer) logf(format string, args ...interface{}) {
 
 // Materialize gets or creates an instance of receiver's type.
 func (m *Materializer) Materialize(receiver interface{}, queryTags ...string) error {
+	if m.currRootX != nil {
+		return errors.New("busy or recursive materialization, try materialize.Context#Materialize() instead")
+	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer func() {
+		m.currRootX = nil
+		m.mu.Unlock()
+	}()
 	x := &Context{m: m}
+	m.currRootX = x
 	return m.materialize(x, receiver, queryTags)
 }
 
