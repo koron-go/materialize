@@ -51,7 +51,7 @@ func (x *Context) Materialize(receiver interface{}, queryTags ...string) *Contex
 }
 
 // Option materializes an optional instance with tags.
-// The error happend are not stored to Context.
+// The error happened are not stored to Context.
 func (x *Context) Option(receiver interface{}, queryTags ...string) error {
 	return x.m.materialize(x, receiver, queryTags)
 }
