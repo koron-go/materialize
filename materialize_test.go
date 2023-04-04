@@ -155,7 +155,7 @@ func TestMaterializeError(t *testing.T) {
 	var bar *Bar
 	err := m.Materialize(&bar)
 	if err == nil {
-		t.Fatal("Materialize(*Bar) should faield")
+		t.Fatal("Materialize(*Bar) should failed")
 	}
 	if err.Error() != "factory failed: factory for *materialize.Bar failed: no bars found" {
 		t.Errorf("unexpected error: %v", err)
@@ -187,4 +187,24 @@ func TestSimple_string(t *testing.T) {
 	check("foo")
 	check("bar", "abc")
 	check("baz", "xyz")
+}
+
+func TestRecursiveMaterializationError(t *testing.T) {
+	m := newTestMaterializer(t)
+	m.MustAdd(func() (*Foo, error) {
+		var bar *Bar
+		err := m.Materialize(&bar)
+		if err != nil {
+			return nil, err
+		}
+		return &Foo{}, nil
+	})
+	var foo *Foo
+	err := m.Materialize(&foo)
+	if err == nil {
+		t.Fatalf("Materialize(*Foo) should failed")
+	}
+	if err.Error() != "factory failed: factory for *materialize.Foo failed: busy or recursive materialization, try materialize.Context#Materialize() instead" {
+		t.Errorf("unexpected error: %v", err)
+	}
 }

@@ -1,7 +1,6 @@
 package materialize
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -14,6 +13,8 @@ type Materializer struct {
 	cache *cache
 	repo  *Repository
 	log   *log.Logger
+
+	currRootX *Context
 }
 
 // New creates a Materializer.
@@ -36,26 +37,34 @@ func (m *Materializer) WithLogger(l *log.Logger) *Materializer {
 	return m
 }
 
-func (m *Materializer) logf(format string, args ...interface{}) {
-	if m.log == nil {
-		log.Printf(format, args...)
-		return
-	}
-	m.log.Printf(format, args...)
-}
+// unused, disabled
+//func (m *Materializer) logf(format string, args ...interface{}) {
+//	if m.log == nil {
+//		log.Printf(format, args...)
+//		return
+//	}
+//	m.log.Printf(format, args...)
+//}
 
 // Materialize gets or creates an instance of receiver's type.
 func (m *Materializer) Materialize(receiver interface{}, queryTags ...string) error {
+	if m.currRootX != nil {
+		return ErrorBusy
+	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer func() {
+		m.currRootX = nil
+		m.mu.Unlock()
+	}()
 	x := &Context{m: m}
+	m.currRootX = x
 	return m.materialize(x, receiver, queryTags)
 }
 
 func (m *Materializer) materialize(x *Context, receiver interface{}, queryTags []string) error {
 	rv := reflect.ValueOf(receiver)
 	if rv.Kind() != reflect.Ptr {
-		return errors.New("receiver should be a pointer")
+		return ErrorReceiverType
 	}
 	typ := rv.Type().Elem()
 
@@ -92,7 +101,7 @@ func (m *Materializer) materialize0(x *Context, rv reflect.Value, typ reflect.Ty
 
 	v, err := f.newInstance(x)
 	if err != nil {
-		return fmt.Errorf("factory failed: %v", err)
+		return fmt.Errorf("factory failed: %w", err)
 	}
 	m.cache.putObj(f, v)
 	rv.Elem().Set(v)

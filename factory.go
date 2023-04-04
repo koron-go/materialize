@@ -1,7 +1,6 @@
 package materialize
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 )
@@ -29,7 +28,7 @@ func newFactory(fn interface{}, tags []string) (*Factory, error) {
 	rfn := reflect.ValueOf(fn)
 	ft := rfn.Type()
 	if ft.Kind() != reflect.Func {
-		return nil, errors.New("factory should be a function")
+		return nil, ErrorFactoryType
 	}
 
 	var (
@@ -51,7 +50,7 @@ func newFactory(fn interface{}, tags []string) (*Factory, error) {
 		outP.checkErr(1)
 		typ = ft.Out(0)
 	default:
-		return nil, errors.New("factory should return 1 or 2 values")
+		return nil, ErrorFactoryRetun
 	}
 
 	switch ft.NumIn() {
@@ -60,14 +59,12 @@ func newFactory(fn interface{}, tags []string) (*Factory, error) {
 	case 1:
 		// type of 1st arg should be *Context
 		if ft.In(0) != ctxType {
-			return nil, errors.New(
-				"first should be *materialize.Context if available")
+			return nil, ErrorFactoryFirstArg
 		}
 		inP = withContext
 		outP.checkCtx()
 	default:
-		return nil, errors.New(
-			"factory should accept no params or only *materialize.Context")
+		return nil, ErrorFactoryArgsRule
 	}
 
 	outP.checkZero()
@@ -125,7 +122,7 @@ func (ps *outProcs) checkErr(nerr int) {
 			return nil
 		}
 		err := rerr.Interface().(error)
-		return fmt.Errorf("factory for %s failed: %s", x.f.Type, err)
+		return fmt.Errorf("factory for %s failed: %w", x.f.Type, err)
 	})
 }
 
@@ -160,8 +157,9 @@ func wrapFunc(typ reflect.Type, fn reflect.Value, inP inProc, outP outProcs) Fac
 		if x.err != nil {
 			return zv, x.err
 		}
-		if x.val != nil {
-		}
+		// XXX: verify these invalid codes.
+		//if x.val != nil {
+		//}
 		return out[0], nil
 	}
 }
