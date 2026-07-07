@@ -2,7 +2,6 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/koron-go/materialize)](https://pkg.go.dev/github.com/koron-go/materialize)
 [![Actions/Go](https://github.com/koron-go/materialize/workflows/Go/badge.svg)](https://github.com/koron-go/materialize/actions?query=workflow%3AGo)
-[![Go Report Card](https://goreportcard.com/badge/github.com/koron-go/materialize)](https://goreportcard.com/report/github.com/koron-go/materialize)
 
 Component's dependencies separator
 
